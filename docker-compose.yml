@@ -1,0 +1,64 @@
+version: '3.5'
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+
+services:
+  postgres:
+    build: ./postgres
+    restart: always
+    ports:
+      - 5432:5432
+    volumes:
+      - ./postgres/data/:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+    networks:
+      - backend
+      - frontend
+    
+  redis:
+    build: ./redis
+    volumes:
+      - ./redis/data/:/data
+    restart: always
+    ports:
+      - 6379:6379
+    networks:
+      - frontend
+      - backend
+
+  ### pgAdmin ##############################################
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=stacn@qq.com
+      - PGADMIN_DEFAULT_PASSWORD=secret
+      - PGADMIN_LISTEN_ADDRESS=0.0.0.0
+    ports:
+      - 5012:80
+    restart: always
+    volumes:
+      - ./pgadmin/data/:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    ### MySQL ###
+  mysql:
+    image: mysql:5.7.34
+    restart: always
+    command: [ '--character-set-server=utf8mb4' ]
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - ./mysql/data/:/var/lib/mysql
+    ports:
+      - 3306:3306
+    networks:
+      - backend
+      - frontend
