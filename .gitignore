@@ -1,0 +1,4 @@
+./mysql/data
+./pgadmin/data
+./postgres/data
+./redis/data
