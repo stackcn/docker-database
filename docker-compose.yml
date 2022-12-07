@@ -1,0 +1,151 @@
+version: '3.5'
+
+networks:
+  backend:
+    driver: bridge
+  frontend:
+    driver: bridge
+volumes:
+  postgres:
+    driver: local
+  mongo:
+    driver: local
+  rabbitmq:
+    driver: local
+  elasticsearch:
+    driver: local
+  logstash:
+    driver: local
+  kibana:
+    driver: local
+services:
+  postgres:
+    build: ./postgres
+    restart: always
+    ports:
+      - 54320:5432
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret
+    networks:
+      - backend
+      - frontend
+    
+  redis:
+    build: ./redis
+    volumes:
+      - ./redis/data/:/data
+    restart: always
+    ports:
+      - 63790:6379
+    networks:
+      - frontend
+      - backend
+
+  ### pgAdmin ##############################################
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=stacn@qq.com
+      - PGADMIN_DEFAULT_PASSWORD=secret
+      - PGADMIN_LISTEN_ADDRESS=0.0.0.0
+    ports:
+      - 800:80
+    restart: always
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    ### MySQL ###
+  mysql:
+    image: mysql:8.0.31
+    restart: always
+    command: [ '--character-set-server=utf8mb4' ]
+    environment:
+      MYSQL_ROOT_PASSWORD: secret
+    volumes:
+      - ./mysql/data/:/var/lib/mysql
+    ports:
+      - 33060:3306
+    networks:
+      - backend
+      - frontend
+
+  mongo:
+    image: mongo:5.0.14
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: secret
+    volumes:
+      - mongo:/data/db
+    ports:
+      - 7017:27017
+    networks:
+      - backend
+      - frontend
+  
+  rabbitmq:
+    image: rabbitmq:3.9-management
+    restart: always
+    volumes:
+      - rabbitmq:/var/lib/rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    networks:
+      - backend
+      - frontend
+
+  elasticsearch:
+    image: elasticsearch:7.17.7
+    restart: always
+    volumes:
+        - elasticsearch:/usr/share/elasticsearch/data
+        - ./elasticsearch:/usr/share/elasticsearch/plugins
+    environment:
+        - cluster.name=elasticsearch
+        - discovery.type=single-node
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      - backend
+      - frontend 
+      
+  logstash:
+    image: logstash:7.17.7
+    restart: always
+    ports:
+      - 4560:4560
+      - 4561:4561
+      - 4562:4562
+      - 4563:4563
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch:elasticsearch
+    networks:
+      - frontend
+
+  kibana:
+    image: kibana:7.17.7
+    restart: always
+    environment:
+      - elasticsearch.hosts=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+    links:
+      - elasticsearch:elasticsearch
+    networks:
+      - backend
+
+    
+
+
